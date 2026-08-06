@@ -10,8 +10,13 @@ def get_current_followers():
     followers = []
     page = 1
     
+    headers = {}
+    token = os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    
     while True:
-        response = requests.get(f"{url}?per_page=100&page={page}")
+        response = requests.get(f"{url}?per_page=100&page={page}", headers=headers)
         response.raise_for_status()
         data = response.json()
         if not data:
