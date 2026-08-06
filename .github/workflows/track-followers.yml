@@ -1,0 +1,50 @@
+name: Track GitHub Followers
+
+on:
+  schedule:
+    - cron: '0 0,12 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-followers:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # To commit the updated JSON file
+      issues: write   # To create an issue for the notification
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Follower Tracker
+        run: python check_followers.py
+
+      - name: Create Notification Issue
+        # This step only runs if the python script created the markdown file
+        if: hashFiles('new_followers_issue.md') != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "🎉 You have new GitHub followers!" \
+            --body-file new_followers_issue.md \
+            --assignee imdeepthakkar
+          
+          # Clean up the file so it doesn't get committed
+          rm new_followers_issue.md
+
+      - name: Commit updated followers list
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add followers.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update followers list" && git push)
